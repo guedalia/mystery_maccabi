@@ -32,11 +32,7 @@ button:hover{border-color:var(--blue)}
 .slot{font-size:30px;font-weight:800;text-align:center;padding:18px 8px;border-radius:12px;background:var(--gold2);color:var(--gold);min-height:82px;display:flex;align-items:center;justify-content:center}
 .slot.done{background:var(--ok2);color:var(--ok)}
 .slot.spin{color:#b9a36a}
-.wishview{margin-top:10px;background:var(--blue2);border-radius:10px;padding:10px 12px;font-size:15px;white-space:pre-wrap}
-.wishview.empty{background:#f2f4f7;color:var(--mute)}
-textarea{width:100%;min-height:80px;font:inherit;border:1px solid var(--line);border-radius:10px;padding:10px;resize:vertical}
 .row{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
-.saved{color:var(--ok);font-size:14px}
 .status{display:flex;flex-wrap:wrap;gap:6px}
 .chip{border-radius:999px;padding:3px 10px;font-size:14px;background:#f2f4f7;color:var(--mute)}
 .chip.y{background:var(--ok2);color:var(--ok)}
@@ -130,9 +126,7 @@ function drawCard(id, isKid) {
   const sub = id === me ? 'You buy a gift for the name you draw.' : 'Help ' + esc(nm(id)) + ' get a gift for the name drawn.';
   let body;
   if (shown[id]) {
-    const w = state.wishes[shown[id]];
     body = '<div class="slot done" id="slot_' + id + '">🎁 ' + esc(nm(shown[id])) + '</div>' +
-      '<div class="wishview' + (w ? '' : ' empty') + '">' + (w ? '<b>' + esc(nm(shown[id])) + '’s wish list:</b>\n' + esc(w) : esc(nm(shown[id])) + ' hasn’t written a wish list yet.') + '</div>' +
       '<div class="row"><button class="link" data-hide="' + id + '">Hide</button></div>';
   } else if (done) {
     body = '<div class="slot done" id="slot_' + id + '">✓ Name drawn</div><div class="row"><button class="primary" data-show="' + id + '">Show the name</button></div>';
@@ -142,21 +136,11 @@ function drawCard(id, isKid) {
   return '<div class="card dcard"><h3>' + (isKid ? '🧒 ' : '') + esc(title) + '</h3><div class="sub">' + sub + '</div>' + body + '</div>';
 }
 
-function wishCard(id) {
-  const label = id === me ? 'My wish list' : nm(id) + '’s wish list';
-  return '<div class="card"><h3 style="margin:0 0 8px;font-size:16px">' + esc(label) + '</h3>' +
-    '<textarea id="wish_' + id + '" placeholder="Ideas for a gift up to ₪15…">' + esc(state.wishes[id] || '') + '</textarea>' +
-    '<div class="row"><button data-wish="' + id + '">Save</button><span class="saved" id="saved_' + id + '"></span></div></div>';
-}
-
 function renderMain() {
   const f = famOf(me);
   let h = '<div class="card hello"><div>Hi <b>' + esc(nm(me)) + '</b> 👋</div><button class="link" data-me="">Not ' + esc(nm(me)) + '?</button></div>';
   h += drawCard(me, false);
   for (const k of f.kids) h += drawCard(k, true);
-  h += '<h2>Wish lists</h2><p class="note">Whoever draws your name sees your wish list.</p>';
-  h += wishCard(me);
-  for (const k of f.kids) h += wishCard(k);
   h += '<h2>Who has drawn</h2><div class="card"><div class="fam" style="margin-top:0">Adults</div><div class="status">' +
     ADULTS.map(id => '<span class="chip' + (state.drawn.includes(id) ? ' y' : '') + '">' + (state.drawn.includes(id) ? '✓ ' : '') + esc(nm(id)) + '</span>').join('') +
     '</div><div class="fam">Grandkids</div><div class="status">' +
@@ -214,14 +198,6 @@ async function doShow(id) {
   try { shown[id] = await rpc('mm_draw', { p_giver: id }); render(); } catch (e) { alert('Couldn’t load. Try again.'); }
 }
 
-async function doWish(id) {
-  const t = document.getElementById('wish_' + id).value.trim();
-  const s = document.getElementById('saved_' + id);
-  s.textContent = 'Saving…';
-  try { await rpc('mm_set_wish', { p_person: id, p_wish: t }); state.wishes[id] = t; s.textContent = '✓ Saved'; }
-  catch (e) { s.textContent = ''; alert('Couldn’t save. Try again.'); }
-}
-
 document.addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b) return;
@@ -229,7 +205,6 @@ document.addEventListener('click', e => {
   else if (b.dataset.draw) doDraw(b.dataset.draw);
   else if (b.dataset.show) doShow(b.dataset.show);
   else if (b.dataset.hide) { delete shown[b.dataset.hide]; render(); }
-  else if (b.dataset.wish) doWish(b.dataset.wish);
 });
 
 (async () => {
